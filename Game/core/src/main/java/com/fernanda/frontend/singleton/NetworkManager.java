@@ -6,8 +6,6 @@ import com.badlogic.gdx.net.HttpRequestBuilder;
 
 public class NetworkManager {
     private static NetworkManager instance;
-
-    // Ganti dengan URL Spring Boot Anda. Anggap saja ini localhost untuk sekarang.
     private final String BASE_URL = "http://localhost:8080/api";
 
     private NetworkManager() {}
@@ -26,7 +24,6 @@ public class NetworkManager {
 
     public void login(String username, String password, final NetworkCallback callback) {
         HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-
         String jsonPayload = "{\"username\":\"" + username + "\", \"password\":\"" + password + "\"}";
 
         Net.HttpRequest httpRequest = requestBuilder.newRequest()
@@ -37,6 +34,34 @@ public class NetworkManager {
             .content(jsonPayload)
             .build();
 
+        sendRequest(httpRequest, callback);
+    }
+
+    public void getDialogues(int stageId, final NetworkCallback callback) {
+        HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+
+        Net.HttpRequest httpRequest = requestBuilder.newRequest()
+            .method(Net.HttpMethods.GET)
+            .url(BASE_URL + "/dialogues/stage/" + stageId)
+            .header("Accept", "application/json")
+            .build();
+
+        sendRequest(httpRequest, callback);
+    }
+
+    public void getStages(final NetworkCallback callback) {
+        HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+
+        Net.HttpRequest httpRequest = requestBuilder.newRequest()
+            .method(Net.HttpMethods.GET)
+            .url(BASE_URL + "/progress/stages")
+            .header("Accept", "application/json")
+            .build();
+
+        sendRequest(httpRequest, callback);
+    }
+
+    private void sendRequest(Net.HttpRequest httpRequest, final NetworkCallback callback) {
         Gdx.net.sendHttpRequest(httpRequest, new Net.HttpResponseListener() {
             @Override
             public void handleHttpResponse(Net.HttpResponse httpResponse) {
@@ -49,7 +74,7 @@ public class NetworkManager {
                         if (statusCode >= 200 && statusCode < 300) {
                             callback.onSuccess(result);
                         } else {
-                            callback.onFailure("Gagal login! Status Code: " + statusCode);
+                            callback.onFailure("Gagal! Status Code: " + statusCode);
                         }
                     }
                 });

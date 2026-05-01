@@ -13,8 +13,14 @@ import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.JsonReader;
+import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+
 import com.fernanda.frontend.Main;
+import com.fernanda.frontend.singleton.NetworkManager;
+import com.fernanda.frontend.ui.dialogue.DialogueLine;
 
 public class StageSelectionScreen implements Screen {
     private final Main game;
@@ -26,23 +32,21 @@ public class StageSelectionScreen implements Screen {
     private Texture popupBgTexture;
     private Texture bossPhotoPlaceholderTexture;
 
-    private final int totalUnlockedStages = 3;
-    private final String[] chapterTitles = { "CH 1: The Beginning", "CH 2: Deep Woods", "CH 3: The Illusion" };
-    private final String[] bossNames = { "The Magician", "The Hermit", "The Wheel of Fortune" };
-    private final int[] starRecords = { 3, 1, 0 };
-
-    private final String[] bossLore = {
-            "Seorang pesulap ulung yang terperangkap dalam delusi kekuasaannya sendiri. Dia adalah dalang yang mengendalikan AnimaSpark dengan trik dan ilusi rumit...",
-            "Pertapa yang bersembunyi di balik kabut hutan yang dalam. Dia bukan hanya mengawasi, tetapi juga memanipulasi ruang di sekelilingnya...",
-            "Roda nasib yang berputar tanpa henti. Tidak ada yang tahu apakah dia membawa keberuntungan atau malapetaka, karena nasib hanyalah siklus..."
-    };
-
+    private Table rootTable;
+    private Table constellationTable;
     private Table popupTable;
+
     private Image popupBossImage;
     private Label popupTitleLabel;
     private Label popupBossLabel;
     private Label popupStarsLabel;
     private Label popupLoreLabel;
+
+    private int selectedStageId = -1;
+    private Array<JsonValue> stagesData = new Array<>(); // sementara
+
+    // Sementara karna blm ad logika get progress user
+    private final int[] starRecords = { 3, 1, 0 };
 
     public StageSelectionScreen(Main game) {
         this.game = game;
@@ -55,8 +59,9 @@ public class StageSelectionScreen implements Screen {
         Gdx.input.setInputProcessor(stage);
         skin = new Skin(Gdx.files.internal("skin/uiskin.json"));
 
-        Table rootTable = new Table();
+        rootTable = new Table();
         rootTable.setFillParent(true);
+        rootTable.top();
 
         Label titleLabel = new Label("CHAPTER SELECTION", skin);
         titleLabel.setColor(Color.WHITE);
@@ -70,34 +75,13 @@ public class StageSelectionScreen implements Screen {
             }
         });
 
-        Table constellationTable = new Table();
-        for (int i = 0; i < totalUnlockedStages; i++) {
-            final int stageIndex = i;
-
-            Image sphereImage = new Image(sphereTexture);
-            sphereImage.setOrigin(Align.center);
-
-            sphereImage.addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    showPopup(stageIndex);
-                }
-            });
-
-            constellationTable.add(sphereImage).size(64, 64).pad(30);
-
-            if (i < totalUnlockedStages - 1) {
-                Image lineImage = new Image(lineTexture);
-                constellationTable.add(lineImage).width(150).height(2);
-            }
-        }
+        constellationTable = new Table();
 
         ScrollPane.ScrollPaneStyle emptyScrollStyle = new ScrollPane.ScrollPaneStyle();
         ScrollPane scrollPane = new ScrollPane(constellationTable, emptyScrollStyle);
         scrollPane.setScrollingDisabled(false, true);
         scrollPane.setFadeScrollBars(false);
 
-        rootTable.top();
         rootTable.add(titleLabel).padTop(70).row();
         rootTable.add(scrollPane).expand().fillX().align(Align.center).row();
         rootTable.add(backBtn).padBottom(50).width(200).height(45);
@@ -105,6 +89,60 @@ public class StageSelectionScreen implements Screen {
         stage.addActor(rootTable);
 
         createPopup();
+
+        fetchStagesData();
+    }
+
+    private void fetchStagesData() {
+        NetworkManager.getInstance().getStages(new NetworkManager.NetworkCallback() {
+            @Override
+            public void onSuccess(String response) {
+                try {
+                    JsonReader jsonReader = new JsonReader();
+                    JsonValue root = jsonReader.parse(response);
+
+                    if (root != null && root.isArray()) {
+                        for (JsonValue stageJson : root) {
+                            stagesData.add(stageJson);
+                        }
+                        buildConstellationUI();
+                    }
+                } catch (Exception e) {
+                    System.out.println("Gagal parsing JSON Stages: " + e.getMessage());
+                }
+            }
+
+            @Override
+            public void onFailure(String error) {
+                System.out.println("ERROR API Stages: " + error);
+            }
+        });
+    }
+
+    private void buildConstellationUI() {
+        constellationTable.clear();
+
+        for (int i = 0; i < stagesData.size; i++) {
+            final JsonValue stageData = stagesData.get(i);
+
+            Image sphereImage = new Image(sphereTexture);
+            sphereImage.setOrigin(Align.center);
+
+            final int index = i;
+            sphereImage.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    showPopup(stageData, index);
+                }
+            });
+
+            constellationTable.add(sphereImage).size(64, 64).pad(30);
+
+            if (i < stagesData.size - 1) {
+                Image lineImage = new Image(lineTexture);
+                constellationTable.add(lineImage).width(150).height(2);
+            }
+        }
     }
 
     private void createPopup() {
@@ -146,13 +184,52 @@ public class StageSelectionScreen implements Screen {
 
         popupTable.add(detailsTable).expand().fillY().top().pad(20).row();
 
-        TextButton playBtn = new TextButton("ENTER ARENA", skin);
+        final TextButton playBtn = new TextButton("ENTER ARENA", skin);
         TextButton closeBtn = new TextButton("CLOSE", skin);
 
         playBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new GameplayScreen(game));
+                playBtn.setText("LOADING...");
+
+                NetworkManager.getInstance().getDialogues(selectedStageId, new NetworkManager.NetworkCallback() {
+                    @Override
+                    public void onSuccess(String response) {
+                        Array<DialogueLine> dialogue = new Array<>();
+                        try {
+                            JsonReader jsonReader = new JsonReader();
+                            JsonValue root = jsonReader.parse(response);
+
+                            if (root != null && root.isArray()) {
+                                for (JsonValue dialogJson : root) {
+                                    String speaker = dialogJson.getString("speaker_name");
+                                    String text = dialogJson.getString("dialogue_text");
+                                    dialogue.add(new DialogueLine(speaker, text));
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.out.println("Gagal parsing JSON Dialogues: " + e.getMessage());
+                        }
+
+                        if (dialogue.isEmpty()) {
+                            dialogue.add(new DialogueLine("System", "Koneksi berhasil, namun dialog belum tersedia di database. Memasuki arena..."));
+                        }
+
+                        playBtn.setText("ENTER ARENA");
+                        game.setScreen(new StoryScreen(game, dialogue, new GameplayScreen(game)));
+                    }
+
+                    @Override
+                    public void onFailure(String error) {
+                        System.out.println("ERROR API Dialogues: " + error);
+                        playBtn.setText("ENTER ARENA");
+
+                        Array<DialogueLine> fallbackDialogue = new Array<>();
+                        fallbackDialogue.add(new DialogueLine("System", "Gagal terhubung ke Server. (" + error + ")"));
+
+                        game.setScreen(new StoryScreen(game, fallbackDialogue, new GameplayScreen(game)));
+                    }
+                });
             }
         });
 
@@ -172,13 +249,15 @@ public class StageSelectionScreen implements Screen {
         stage.addActor(popupTable);
     }
 
-    private void showPopup(int index) {
-        popupTitleLabel.setText(chapterTitles[index]);
-        popupBossLabel.setText("Boss: " + bossNames[index]);
-        popupLoreLabel.setText(bossLore[index]);
+    private void showPopup(JsonValue stageData, int index) {
+        selectedStageId = stageData.getInt("stage_id");
+
+        popupTitleLabel.setText(stageData.getString("stage_name"));
+        popupBossLabel.setText("Boss: " + stageData.getString("boss_name"));
+        popupLoreLabel.setText(stageData.getString("lore_text"));
 
         StringBuilder starsStr = new StringBuilder();
-        int obtainedStars = starRecords[index];
+        int obtainedStars = starRecords[index]; // Sementara hardcode huhu
         for (int i = 0; i < 3; i++) {
             if (i < obtainedStars)
                 starsStr.append("★ ");

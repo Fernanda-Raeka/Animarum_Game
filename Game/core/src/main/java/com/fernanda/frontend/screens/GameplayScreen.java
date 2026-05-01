@@ -72,12 +72,12 @@ public class GameplayScreen implements Screen, GameObserver {
         sharedStats.addObserver(this);
 
         player1 = new Player(
-                arenaX + 100f, arenaY + 300f, Color.BLUE,
-                Input.Keys.W, Input.Keys.S, Input.Keys.A, Input.Keys.D, sharedStats);
+            arenaX + 100f, arenaY + 300f, Color.BLUE,
+            Input.Keys.W, Input.Keys.S, Input.Keys.A, Input.Keys.D, sharedStats);
 
         player2 = new Player(
-                arenaX + 500f, arenaY + 300f, Color.RED,
-                Input.Keys.UP, Input.Keys.DOWN, Input.Keys.LEFT, Input.Keys.RIGHT, sharedStats);
+            arenaX + 500f, arenaY + 300f, Color.RED,
+            Input.Keys.UP, Input.Keys.DOWN, Input.Keys.LEFT, Input.Keys.RIGHT, sharedStats);
 
         boss = new MagicianBoss(arenaX, arenaY, ARENA_SIZE);
         boss.addObserver(this);
@@ -88,7 +88,7 @@ public class GameplayScreen implements Screen, GameObserver {
         uiTable.setFillParent(true);
 
         TextButton menuBtn = new TextButton("MENU", skin);
-        
+
         menuBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
