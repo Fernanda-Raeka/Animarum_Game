@@ -1,31 +1,43 @@
 package com.fernanda.frontend.factory;
 
 import com.fernanda.frontend.entities.projectiles.BaseProjectile;
-import com.fernanda.frontend.entities.projectiles.MeteorProjectile;
 import com.fernanda.frontend.entities.projectiles.FireballProjectile;
 import com.fernanda.frontend.entities.projectiles.LaserProjectile;
+import com.fernanda.frontend.entities.projectiles.MeteorProjectile;
 import com.fernanda.frontend.entities.projectiles.TsunamiProjectile;
-import com.fernanda.frontend.pool.MeteorPool;
-import com.fernanda.frontend.pool.FireballPool;
-import com.fernanda.frontend.pool.LaserPool;
-import com.fernanda.frontend.pool.TsunamiPool;
+import com.fernanda.frontend.pool.GenericPool;
+import com.fernanda.frontend.strategy.movement.DropMovement;
+import com.fernanda.frontend.strategy.movement.LinearMovement;
 
 public class ProjectileFactory {
-    
-    private static final MeteorPool meteorPool = new MeteorPool();
-    private static final FireballPool fireballPool = new FireballPool();
-    private static final LaserPool laserPool = new LaserPool();
-    private static final TsunamiPool tsunamiPool = new TsunamiPool();
 
-    public static MeteorProjectile obtainMeteor(float x, float y, float speedX, float speedY) {
+    private static final GenericPool<MeteorProjectile> meteorPool = new GenericPool<>(MeteorProjectile::new);
+
+    private static final GenericPool<FireballProjectile> fireballPool = new GenericPool<>(100, 500, FireballProjectile::new);
+
+    private static final GenericPool<LaserProjectile> laserPool = new GenericPool<>(LaserProjectile::new);
+
+    private static final GenericPool<TsunamiProjectile> tsunamiPool = new GenericPool<>(TsunamiProjectile::new);
+
+    public static MeteorProjectile obtainMeteor(float x, float y, float speedY) {
         MeteorProjectile meteor = meteorPool.obtain();
-        meteor.init(x, y, speedX, speedY);
+        meteor.init(x, y, 0, speedY);
+
+        DropMovement dropStrategy = new DropMovement();
+        dropStrategy.init(speedY);
+        meteor.setMovementStrategy(dropStrategy);
+
         return meteor;
     }
 
     public static FireballProjectile obtainFireball(float x, float y, float speedX, float speedY) {
         FireballProjectile fireball = fireballPool.obtain();
         fireball.init(x, y, speedX, speedY);
+
+        LinearMovement linearStrategy = new LinearMovement();
+        linearStrategy.init(speedX, speedY);
+        fireball.setMovementStrategy(linearStrategy);
+
         return fireball;
     }
 
@@ -38,6 +50,11 @@ public class ProjectileFactory {
     public static TsunamiProjectile obtainTsunami(float x, float y, float width, float height, float speedX, boolean isFake) {
         TsunamiProjectile tsunami = tsunamiPool.obtain();
         tsunami.initTsunami(x, y, width, height, speedX, isFake);
+
+        LinearMovement linearStrategy = new LinearMovement();
+        linearStrategy.init(speedX, 0);
+        tsunami.setMovementStrategy(linearStrategy);
+
         return tsunami;
     }
 

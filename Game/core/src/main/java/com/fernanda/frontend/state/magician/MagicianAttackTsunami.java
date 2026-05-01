@@ -6,26 +6,26 @@ import com.fernanda.frontend.entities.BaseBoss;
 import com.fernanda.frontend.entities.MagicianBoss;
 import com.fernanda.frontend.state.BossState;
 import com.fernanda.frontend.strategy.attack.AttackPattern;
-import com.fernanda.frontend.strategy.attack.RandomLaserPattern;
+import com.fernanda.frontend.strategy.attack.TsunamiWavePattern;
 
-public class MagicianAttackLaser implements BossState {
+public class MagicianAttackTsunami implements BossState {
     private float attackTimer;
-    private int laserCount = 0;
-    private float nextSpawnTime = 0f;
-    private final float ATTACK_DURATION = 6.2f;
+    private int waveCount = 0;
+    private float nextSpawnTime = 0.5f;
+    private final float ATTACK_DURATION = 7.5f;
     private AttackPattern attackPattern;
 
     @Override
     public void enter(BaseBoss boss) {
         attackTimer = 0f;
-        laserCount = 0;
-        nextSpawnTime = 0f;
-        attackPattern = new RandomLaserPattern(1.5f);
+        waveCount = 0;
+        nextSpawnTime = 0.5f;
+        attackPattern = new TsunamiWavePattern();
 
         if (boss instanceof MagicianBoss) {
             MagicianBoss mBoss = (MagicianBoss) boss;
-            mBoss.setCurrentSide(MagicianBoss.Side.RIGHT);
-            mBoss.setBossColor(com.badlogic.gdx.graphics.Color.YELLOW);
+            mBoss.setCurrentSide(MagicianBoss.Side.LEFT);
+            mBoss.setBossColor(com.badlogic.gdx.graphics.Color.CYAN);
         }
     }
 
@@ -36,10 +36,10 @@ public class MagicianAttackLaser implements BossState {
             ((MagicianBoss) boss).updatePosition(arenaX, arenaY, arenaSize);
         }
 
-        if (laserCount < 4 && attackTimer >= nextSpawnTime) {
+        if (waveCount < 4 && attackTimer >= nextSpawnTime) {
             attackPattern.execute(boss, arenaX, arenaY, arenaSize);
-            laserCount++;
-            nextSpawnTime += (laserCount == 1) ? 1.5f : 1.5f;
+            waveCount++;
+            nextSpawnTime += 1.5f;
         }
 
         if (attackTimer >= ATTACK_DURATION) {
