@@ -1,0 +1,33 @@
+# Gradle / build directories
+.gradle/
+build/
+**/build/
+bin/
+**/bin/
+out/
+**/out/
+
+# IDEs (IntelliJ, VS Code, Eclipse, dll)
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Java compiled files
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
