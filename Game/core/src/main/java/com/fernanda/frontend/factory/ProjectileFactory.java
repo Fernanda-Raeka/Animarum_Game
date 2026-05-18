@@ -6,6 +6,7 @@ import com.fernanda.frontend.entities.projectiles.LaserProjectile;
 import com.fernanda.frontend.entities.projectiles.MeteorProjectile;
 import com.fernanda.frontend.entities.projectiles.TsunamiProjectile;
 import com.fernanda.frontend.entities.projectiles.MineProjectile;
+import com.fernanda.frontend.entities.projectiles.ConvergeProjectile;
 import com.fernanda.frontend.pool.GenericPool;
 import com.fernanda.frontend.strategy.movement.DropMovement;
 import com.fernanda.frontend.strategy.movement.LinearMovement;
@@ -20,7 +21,9 @@ public class ProjectileFactory {
 
     private static final GenericPool<TsunamiProjectile> tsunamiPool = new GenericPool<>(TsunamiProjectile::new);
 
-    private static final GenericPool<MineProjectile> minePool = new GenericPool<>(100, 200, MineProjectile::new);
+    private static final GenericPool<MineProjectile> minePool = new GenericPool<>(20, 100, MineProjectile::new);
+
+    private static final GenericPool<ConvergeProjectile> convergePool = new GenericPool<>(120, 200, ConvergeProjectile::new);
 
     public static MeteorProjectile obtainMeteor(float x, float y, float speedY) {
         MeteorProjectile meteor = meteorPool.obtain();
@@ -61,6 +64,12 @@ public class ProjectileFactory {
         return tsunami;
     }
 
+    public static ConvergeProjectile obtainConverge(float startX, float startY, float focalX, float focalY, float targetRadius, float speedX, float speedY) {
+        ConvergeProjectile p = convergePool.obtain();
+        p.initConverge(startX, startY, focalX, focalY, targetRadius, speedX, speedY);
+        return p;
+    }
+
     public static MineProjectile obtainMine(float x, float y, float radius, float warningDuration, float explosionDuration) {
         MineProjectile mine = minePool.obtain();
         mine.initMine(x, y, radius, warningDuration, explosionDuration);
@@ -78,6 +87,8 @@ public class ProjectileFactory {
             tsunamiPool.free((TsunamiProjectile) projectile);
         } else if (projectile instanceof MineProjectile) {
             minePool.free((MineProjectile) projectile);
+        } else if (projectile instanceof ConvergeProjectile) {
+            convergePool.free((ConvergeProjectile) projectile);
         }
     }
 }

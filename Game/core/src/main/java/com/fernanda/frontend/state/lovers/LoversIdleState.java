@@ -20,19 +20,27 @@ public class LoversIdleState implements BossState {
         if (!hasSpawnedSparks && boss instanceof LoversBoss) {
             LoversBoss lovers = (LoversBoss) boss;
             
-            AnimaSpark spark1 = SparkFactory.obtainSpark(
-                lovers.getBoundsPlayer1().x, 
-                lovers.getBoundsPlayer1().y, 
-                lovers.getBoundsPlayer1().width,
-                lovers.getBoundsPlayer1().height
-            );
+            AnimaSpark spark1;
+            AnimaSpark spark2;
             
-            AnimaSpark spark2 = SparkFactory.obtainSpark(
-                lovers.getBoundsPlayer2().x, 
-                lovers.getBoundsPlayer2().y, 
-                lovers.getBoundsPlayer2().width, 
-                lovers.getBoundsPlayer2().height
-            );
+            if (lovers.isArenaSplit()) {
+                spark1 = SparkFactory.obtainSpark(
+                    lovers.getBoundsPlayer1().x, 
+                    lovers.getBoundsPlayer1().y, 
+                    lovers.getBoundsPlayer1().width,
+                    lovers.getBoundsPlayer1().height
+                );
+                
+                spark2 = SparkFactory.obtainSpark(
+                    lovers.getBoundsPlayer2().x, 
+                    lovers.getBoundsPlayer2().y, 
+                    lovers.getBoundsPlayer2().width, 
+                    lovers.getBoundsPlayer2().height
+                );
+            } else {
+                spark1 = SparkFactory.obtainSpark(arenaX, arenaY, arenaSize, arenaSize);
+                spark2 = SparkFactory.obtainSpark(arenaX, arenaY, arenaSize, arenaSize);
+            }
             
             spark1.linkWith(spark2);
             

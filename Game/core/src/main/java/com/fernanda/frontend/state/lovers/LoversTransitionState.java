@@ -15,21 +15,28 @@ public class LoversTransitionState implements BossState {
     @Override
     public void enter(BaseBoss boss) {
         this.timer = 0f;
-        this.nextAttack = MathUtils.random(1);
+        this.nextAttack = MathUtils.random(1, 3);
         if (boss instanceof LoversBoss) {
-            ((LoversBoss) boss).setTargetFade(1f, 8f); // Layar menggelap (fade to black) dalam 0.5 detik
+            ((LoversBoss) boss).setTargetFade(1f, 8f); 
         }
     }
 
     @Override
-    public void update(BaseBoss boss, float delta, float arenaX, float arenaY, float arenaSize, Array<AnimaSpark> sparks) {
+    public void update(BaseBoss boss, float delta, float arenaX, float arenaY, float arenaSize,
+            Array<AnimaSpark> sparks) {
         timer += delta;
-        
+
         if (timer >= TRANSITION_DURATION) {
-            if (nextAttack == 0) {
-                boss.changeState(new LoversCrossfireState());
-            } else {
-                boss.changeState(new LoversMinefieldState());
+            switch (nextAttack) {
+                case 1:
+                    boss.changeState(new LoversCrossfireState());
+                    break;
+                case 2:
+                    boss.changeState(new LoversMinefieldState());
+                    break;
+                case 3:
+                    boss.changeState(new LoversConvergeState());
+                    break;
             }
         }
     }

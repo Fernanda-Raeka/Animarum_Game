@@ -357,7 +357,10 @@ public class GameplayScreen implements Screen, GameObserver {
     public void onPlayerHPChanged(float currentHp, float maxHp) {
         currentHpRatio = currentHp / maxHp;
 
-        if (currentHpRatio <= 0.3f) {
+        if (currentHpRatio <= 0f) {
+            game.setScreen(new GameOverScreen(game, currentStageId));
+            return;
+        } else if (currentHpRatio <= 0.3f) {
             hpColor = Color.RED;
         } else if (currentHpRatio <= 0.6f) {
             hpColor = Color.ORANGE;
