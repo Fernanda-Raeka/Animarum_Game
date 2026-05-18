@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -23,7 +24,9 @@ import com.fernanda.frontend.Main;
 import com.fernanda.frontend.entities.Player;
 import com.fernanda.frontend.entities.AnimaSpark;
 import com.fernanda.frontend.entities.SharedStats;
+import com.fernanda.frontend.entities.BaseBoss;
 import com.fernanda.frontend.entities.MagicianBoss;
+import com.fernanda.frontend.entities.LoversBoss;
 import com.fernanda.frontend.entities.projectiles.BaseProjectile;
 import com.fernanda.frontend.observer.GameObserver;
 import com.badlogic.gdx.math.Intersector;
@@ -47,15 +50,17 @@ public class GameplayScreen implements Screen, GameObserver {
     private float currentHpRatio = 1f;
     private Color hpColor = Color.GREEN;
 
-    private MagicianBoss boss;
+    private BaseBoss boss;
     private float bossHpRatio = 1f;
+    private int currentStageId;
 
     private boolean isPaused = false;
     private Table pauseTable;
     private Table confirmExitTable;
 
-    public GameplayScreen(Main game) {
+    public GameplayScreen(Main game, int stageId) {
         this.game = game;
+        this.currentStageId = stageId;
     }
 
     @Override
@@ -72,14 +77,18 @@ public class GameplayScreen implements Screen, GameObserver {
         sharedStats.addObserver(this);
 
         player1 = new Player(
-            arenaX + 100f, arenaY + 300f, Color.BLUE,
-            Input.Keys.W, Input.Keys.S, Input.Keys.A, Input.Keys.D, sharedStats);
+                1, arenaX + 150f, arenaY + 250f, Color.BLUE,
+                Input.Keys.W, Input.Keys.S, Input.Keys.A, Input.Keys.D, sharedStats);
 
         player2 = new Player(
-            arenaX + 500f, arenaY + 300f, Color.RED,
-            Input.Keys.UP, Input.Keys.DOWN, Input.Keys.LEFT, Input.Keys.RIGHT, sharedStats);
+                2, arenaX + 350f, arenaY + 250f, Color.RED,
+                Input.Keys.UP, Input.Keys.DOWN, Input.Keys.LEFT, Input.Keys.RIGHT, sharedStats);
 
-        boss = new MagicianBoss(arenaX, arenaY, ARENA_SIZE);
+        if (currentStageId == 2) {
+            boss = new LoversBoss(640, 360);
+        } else {
+            boss = new MagicianBoss(arenaX, arenaY, ARENA_SIZE);
+        }
         boss.addObserver(this);
 
         sparks = new com.badlogic.gdx.utils.Array<>();
@@ -99,7 +108,7 @@ public class GameplayScreen implements Screen, GameObserver {
             }
         });
 
-        Label bossNameLabel = new Label("BOSS: THE MAGICIAN", skin);
+        Label bossNameLabel = new Label("BOSS: " + boss.getName().toUpperCase(), skin);
 
         Table bossTable = new Table();
         bossTable.add(bossNameLabel).row();
@@ -152,7 +161,8 @@ public class GameplayScreen implements Screen, GameObserver {
         confirmExitTable.setBackground(pauseTable.getBackground());
         confirmExitTable.setVisible(false);
 
-        Label warnLabel = new Label("Apakah anda yakin ingin keluar?\nJika keluar maka progress chapter ini tidak akan tersimpan.", skin);
+        Label warnLabel = new Label(
+                "Apakah anda yakin ingin keluar?\nJika keluar maka progress chapter ini tidak akan tersimpan.", skin);
         warnLabel.setAlignment(Align.center);
         warnLabel.setColor(Color.RED);
 
@@ -202,21 +212,41 @@ public class GameplayScreen implements Screen, GameObserver {
         }
 
         if (!isPaused) {
-            player1.update(delta, arenaX, arenaY, ARENA_SIZE);
-            player2.update(delta, arenaX, arenaY, ARENA_SIZE);
+            Rectangle p1Bounds;
+            Rectangle p2Bounds;
+
+            if (boss instanceof LoversBoss && ((LoversBoss) boss).isArenaSplit()) {
+                p1Bounds = ((LoversBoss) boss).getBoundsPlayer1();
+                p2Bounds = ((LoversBoss) boss).getBoundsPlayer2();
+            } else {
+                p1Bounds = new Rectangle(arenaX, arenaY, ARENA_SIZE, ARENA_SIZE);
+                p2Bounds = new Rectangle(arenaX, arenaY, ARENA_SIZE, ARENA_SIZE);
+            }
+
+            player1.update(delta, p1Bounds);
+            player2.update(delta, p2Bounds);
             boss.update(delta, arenaX, arenaY, ARENA_SIZE, sparks);
+
+            for (AnimaSpark spark : sparks) {
+                boolean p1Inside = Intersector.overlaps(player1.getBounds(), spark.getBounds());
+                boolean p2Inside = Intersector.overlaps(player2.getBounds(), spark.getBounds());
+                spark.setSteppedOn(p1Inside || p2Inside);
+            }
+
+            for (AnimaSpark spark : sparks) {
+                spark.update(delta);
+            }
 
             for (int i = sparks.size - 1; i >= 0; i--) {
                 AnimaSpark spark = sparks.get(i);
 
-                boolean p1Inside = Intersector.overlaps(player1.getBounds(), spark.getBounds());
-                boolean p2Inside = Intersector.overlaps(player2.getBounds(), spark.getBounds());
-
-                spark.update(delta, p1Inside, p2Inside);
-
                 if (spark.isCollected()) {
                     sparks.removeIndex(i);
-                    boss.takeDamage(100f);
+                    if (boss instanceof LoversBoss) {
+                        boss.takeDamage(50f); 
+                    } else {
+                        boss.takeDamage(100f);
+                    }
                     com.fernanda.frontend.factory.SparkFactory.freeSpark(spark);
                 } else if (spark.isExpired()) {
                     sparks.removeIndex(i);
@@ -267,8 +297,29 @@ public class GameplayScreen implements Screen, GameObserver {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         shapeRenderer.setColor(Color.WHITE);
-        shapeRenderer.rect(arenaX, arenaY, ARENA_SIZE, ARENA_SIZE);
+
+        if (boss instanceof LoversBoss && ((LoversBoss) boss).isArenaSplit()) {
+            LoversBoss lovers = (LoversBoss) boss;
+            shapeRenderer.rect(lovers.getBoundsPlayer1().x, lovers.getBoundsPlayer1().y,
+                    lovers.getBoundsPlayer1().width, lovers.getBoundsPlayer1().height);
+            shapeRenderer.rect(lovers.getBoundsPlayer2().x, lovers.getBoundsPlayer2().y,
+                    lovers.getBoundsPlayer2().width, lovers.getBoundsPlayer2().height);
+        } else {
+            shapeRenderer.rect(arenaX, arenaY, ARENA_SIZE, ARENA_SIZE);
+        }
+
         shapeRenderer.end();
+
+        if (boss instanceof LoversBoss) {
+            float fadeAlpha = ((LoversBoss) boss).getFadeAlpha();
+            if (fadeAlpha > 0f) {
+                Gdx.gl.glEnable(GL20.GL_BLEND);
+                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+                shapeRenderer.setColor(0f, 0f, 0f, fadeAlpha);
+                shapeRenderer.rect(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+                shapeRenderer.end();
+            }
+        }
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         float barWidth = 400f;

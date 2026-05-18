@@ -5,6 +5,7 @@ import com.fernanda.frontend.entities.projectiles.FireballProjectile;
 import com.fernanda.frontend.entities.projectiles.LaserProjectile;
 import com.fernanda.frontend.entities.projectiles.MeteorProjectile;
 import com.fernanda.frontend.entities.projectiles.TsunamiProjectile;
+import com.fernanda.frontend.entities.projectiles.MineProjectile;
 import com.fernanda.frontend.pool.GenericPool;
 import com.fernanda.frontend.strategy.movement.DropMovement;
 import com.fernanda.frontend.strategy.movement.LinearMovement;
@@ -18,6 +19,8 @@ public class ProjectileFactory {
     private static final GenericPool<LaserProjectile> laserPool = new GenericPool<>(LaserProjectile::new);
 
     private static final GenericPool<TsunamiProjectile> tsunamiPool = new GenericPool<>(TsunamiProjectile::new);
+
+    private static final GenericPool<MineProjectile> minePool = new GenericPool<>(100, 200, MineProjectile::new);
 
     public static MeteorProjectile obtainMeteor(float x, float y, float speedY) {
         MeteorProjectile meteor = meteorPool.obtain();
@@ -58,6 +61,12 @@ public class ProjectileFactory {
         return tsunami;
     }
 
+    public static MineProjectile obtainMine(float x, float y, float radius, float warningDuration, float explosionDuration) {
+        MineProjectile mine = minePool.obtain();
+        mine.initMine(x, y, radius, warningDuration, explosionDuration);
+        return mine;
+    }
+
     public static void freeProjectile(BaseProjectile projectile) {
         if (projectile instanceof MeteorProjectile) {
             meteorPool.free((MeteorProjectile) projectile);
@@ -67,6 +76,8 @@ public class ProjectileFactory {
             laserPool.free((LaserProjectile) projectile);
         } else if (projectile instanceof TsunamiProjectile) {
             tsunamiPool.free((TsunamiProjectile) projectile);
+        } else if (projectile instanceof MineProjectile) {
+            minePool.free((MineProjectile) projectile);
         }
     }
 }

@@ -16,10 +16,12 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.JsonValue;
+import com.badlogic.gdx.utils.ObjectMap;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 import com.fernanda.frontend.Main;
 import com.fernanda.frontend.singleton.NetworkManager;
+import com.fernanda.frontend.singleton.SessionManager;
 import com.fernanda.frontend.ui.dialogue.DialogueLine;
 
 public class StageSelectionScreen implements Screen {
@@ -43,10 +45,8 @@ public class StageSelectionScreen implements Screen {
     private Label popupLoreLabel;
 
     private int selectedStageId = -1;
-    private Array<JsonValue> stagesData = new Array<>(); // sementara
-
-    // Sementara karna blm ad logika get progress user
-    private final int[] starRecords = { 3, 1, 0 };
+    private Array<JsonValue> stagesData = new Array<>();
+    private ObjectMap<Integer, Integer> stageStarsMap = new ObjectMap<>();
 
     public StageSelectionScreen(Main game) {
         this.game = game;
@@ -89,11 +89,11 @@ public class StageSelectionScreen implements Screen {
         stage.addActor(rootTable);
 
         createPopup();
-
         fetchStagesData();
     }
 
     private void fetchStagesData() {
+        stagesData.clear();
         NetworkManager.getInstance().getStages(new NetworkManager.NetworkCallback() {
             @Override
             public void onSuccess(String response) {
@@ -105,16 +105,60 @@ public class StageSelectionScreen implements Screen {
                         for (JsonValue stageJson : root) {
                             stagesData.add(stageJson);
                         }
-                        buildConstellationUI();
+                        
+                        stagesData.sort(new java.util.Comparator<JsonValue>() {
+                            @Override
+                            public int compare(JsonValue o1, JsonValue o2) {
+                                return Integer.compare(o1.getInt("stage_id"), o2.getInt("stage_id"));
+                            }
+                        });
+
+                        fetchAccountProgressData();
                     }
                 } catch (Exception e) {
-                    System.out.println("Gagal parsing JSON Stages: " + e.getMessage());
+                    System.out.println(e.getMessage());
                 }
             }
 
             @Override
             public void onFailure(String error) {
-                System.out.println("ERROR API Stages: " + error);
+                System.out.println(error);
+            }
+        });
+    }
+
+    private void fetchAccountProgressData() {
+        int currentAccountId = SessionManager.getInstance().getAccountId();
+        stageStarsMap.clear();
+
+        NetworkManager.getInstance().getAccountProgress(currentAccountId, new NetworkManager.NetworkCallback() {
+            @Override
+            public void onSuccess(String response) {
+                try {
+                    JsonReader jsonReader = new JsonReader();
+                    JsonValue root = jsonReader.parse(response);
+
+                    if (root != null && root.isArray()) {
+                        for (JsonValue progressJson : root) {
+                            JsonValue stageJson = progressJson.get("stage");
+                            if (stageJson != null) {
+                                int stageId = stageJson.getInt("stage_id");
+                                int starsEarned = progressJson.getInt("stars_earned");
+                                stageStarsMap.put(stageId, starsEarned);
+                            }
+                        }
+                    }
+                    buildConstellationUI();
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                    buildConstellationUI();
+                }
+            }
+
+            @Override
+            public void onFailure(String error) {
+                System.out.println(error);
+                buildConstellationUI();
             }
         });
     }
@@ -128,11 +172,10 @@ public class StageSelectionScreen implements Screen {
             Image sphereImage = new Image(sphereTexture);
             sphereImage.setOrigin(Align.center);
 
-            final int index = i;
             sphereImage.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
-                    showPopup(stageData, index);
+                    showPopup(stageData);
                 }
             });
 
@@ -208,7 +251,7 @@ public class StageSelectionScreen implements Screen {
                                 }
                             }
                         } catch (Exception e) {
-                            System.out.println("Gagal parsing JSON Dialogues: " + e.getMessage());
+                            System.out.println(e.getMessage());
                         }
 
                         if (dialogue.isEmpty()) {
@@ -216,18 +259,18 @@ public class StageSelectionScreen implements Screen {
                         }
 
                         playBtn.setText("ENTER ARENA");
-                        game.setScreen(new StoryScreen(game, dialogue, new GameplayScreen(game)));
+                        game.setScreen(new StoryScreen(game, dialogue, new GameplayScreen(game, selectedStageId)));
                     }
 
                     @Override
                     public void onFailure(String error) {
-                        System.out.println("ERROR API Dialogues: " + error);
+                        System.out.println(error);
                         playBtn.setText("ENTER ARENA");
 
                         Array<DialogueLine> fallbackDialogue = new Array<>();
                         fallbackDialogue.add(new DialogueLine("System", "Gagal terhubung ke Server. (" + error + ")"));
 
-                        game.setScreen(new StoryScreen(game, fallbackDialogue, new GameplayScreen(game)));
+                        game.setScreen(new StoryScreen(game, fallbackDialogue, new GameplayScreen(game, selectedStageId)));
                     }
                 });
             }
@@ -249,22 +292,23 @@ public class StageSelectionScreen implements Screen {
         stage.addActor(popupTable);
     }
 
-    private void showPopup(JsonValue stageData, int index) {
+    private void showPopup(JsonValue stageData) {
         selectedStageId = stageData.getInt("stage_id");
 
         popupTitleLabel.setText(stageData.getString("stage_name"));
         popupBossLabel.setText("Boss: " + stageData.getString("boss_name"));
         popupLoreLabel.setText(stageData.getString("lore_text"));
 
+        int obtainedStars = stageStarsMap.get(selectedStageId, 0);
+
         StringBuilder starsStr = new StringBuilder();
-        int obtainedStars = starRecords[index]; // Sementara hardcode huhu
         for (int i = 0; i < 3; i++) {
             if (i < obtainedStars)
                 starsStr.append("★ ");
             else
                 starsStr.append("☆ ");
         }
-        popupStarsLabel.setText(starsStr.toString());
+        popupStarsLabel.setText("Progress: " + obtainedStars + " / 3 Stars");
 
         popupTable.setVisible(true);
     }

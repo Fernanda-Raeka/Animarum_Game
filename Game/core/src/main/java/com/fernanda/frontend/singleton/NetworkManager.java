@@ -61,6 +61,18 @@ public class NetworkManager {
         sendRequest(httpRequest, callback);
     }
 
+    public void getAccountProgress(int accountId, final NetworkCallback callback) {
+        HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+
+        Net.HttpRequest httpRequest = requestBuilder.newRequest()
+            .method(Net.HttpMethods.GET)
+            .url(BASE_URL + "/progress/account/" + accountId)
+            .header("Accept", "application/json")
+            .build();
+
+        sendRequest(httpRequest, callback);
+    }
+
     private void sendRequest(Net.HttpRequest httpRequest, final NetworkCallback callback) {
         Gdx.net.sendHttpRequest(httpRequest, new Net.HttpResponseListener() {
             @Override

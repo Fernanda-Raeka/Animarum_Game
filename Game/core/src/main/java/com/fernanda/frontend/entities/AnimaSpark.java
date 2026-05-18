@@ -16,14 +16,16 @@ public class AnimaSpark implements Poolable {
     private final float captureRequired = 3f;
 
     private boolean isCollected = false;
-    private boolean isDuoType;
     private Circle bounds;
+    
+    private AnimaSpark linkedSpark;
+    private boolean isSteppedOn;
 
     public AnimaSpark() {}
 
-    public void init(float arenaX, float arenaY, float arenaSize, boolean forceDuo) {
-        this.x = MathUtils.random(arenaX + radius, arenaX + arenaSize - radius);
-        this.y = MathUtils.random(arenaY + radius, arenaY + arenaSize - radius);
+    public void init(float arenaX, float arenaY, float arenaWidth, float arenaHeight) {
+        this.x = MathUtils.random(arenaX + radius, arenaX + arenaWidth - radius);
+        this.y = MathUtils.random(arenaY + radius, arenaY + arenaHeight - radius);
         this.timer = maxDuration;
         this.captureProgress = 0f;
         this.isCollected = false;
@@ -32,7 +34,21 @@ public class AnimaSpark implements Poolable {
         } else {
             this.bounds.set(x, y, radius);
         }
-        this.isDuoType = forceDuo;
+        this.linkedSpark = null;
+        this.isSteppedOn = false;
+    }
+
+    public void linkWith(AnimaSpark other) {
+        this.linkedSpark = other;
+        other.linkedSpark = this;
+    }
+
+    public void setSteppedOn(boolean steppedOn) {
+        this.isSteppedOn = steppedOn;
+    }
+
+    public boolean isSteppedOn() {
+        return this.isSteppedOn;
     }
 
     @Override
@@ -40,16 +56,18 @@ public class AnimaSpark implements Poolable {
         this.timer = maxDuration;
         this.captureProgress = 0f;
         this.isCollected = false;
+        this.linkedSpark = null;
+        this.isSteppedOn = false;
     }
 
-    public void update(float delta, boolean p1Inside, boolean p2Inside) {
+    public void update(float delta) {
         timer -= delta;
 
         boolean beingCaptured;
-        if (isDuoType) {
-            beingCaptured = p1Inside && p2Inside;
+        if (linkedSpark != null) {
+            beingCaptured = this.isSteppedOn && linkedSpark.isSteppedOn();
         } else {
-            beingCaptured = p1Inside || p2Inside;
+            beingCaptured = this.isSteppedOn;
         }
 
         if (beingCaptured) {
@@ -66,7 +84,7 @@ public class AnimaSpark implements Poolable {
     public void render(ShapeRenderer shapeRenderer) {
         float alpha = timer / maxDuration;
 
-        if (isDuoType) {
+        if (linkedSpark != null) {
             shapeRenderer.setColor(new Color(1, 0, 1, alpha));
         } else {
             shapeRenderer.setColor(new Color(1, 1, 0, alpha));

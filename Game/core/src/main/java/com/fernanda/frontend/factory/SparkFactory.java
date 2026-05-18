@@ -6,9 +6,9 @@ import com.fernanda.frontend.pool.GenericPool;
 public class SparkFactory {
     private static final GenericPool<AnimaSpark> sparkPool = new GenericPool<>(50, 200, AnimaSpark::new);
 
-    public static AnimaSpark obtainSpark(float arenaX, float arenaY, float arenaSize, boolean isDuo) {
+    public static AnimaSpark obtainSpark(float arenaX, float arenaY, float arenaWidth, float arenaHeight) {
         AnimaSpark spark = sparkPool.obtain();
-        spark.init(arenaX, arenaY, arenaSize, isDuo);
+        spark.init(arenaX, arenaY, arenaWidth, arenaHeight);
         return spark;
     }
 

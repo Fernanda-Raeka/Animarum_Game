@@ -32,8 +32,7 @@ public class MagicianIdleState implements BossState {
         }
 
         if (!hasSpawnedSpark && idleTimer >= 0f) {
-            boolean isDuo = false; // sementara solo spark doang
-            sparks.add(com.fernanda.frontend.factory.SparkFactory.obtainSpark(arenaX, arenaY, arenaSize, isDuo));
+            sparks.add(com.fernanda.frontend.factory.SparkFactory.obtainSpark(arenaX, arenaY, arenaSize, arenaSize));
             hasSpawnedSpark = true;
             System.out.println("Sistem: The Magician memunculkan 1 Anima Spark!");
         }
